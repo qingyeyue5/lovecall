@@ -322,41 +322,56 @@
 <!-- LOBBY -->
 <div class="screen" id="lobby">
   <div class="logo">Love<span>Call</span></div>
-  <p class="tagline">私密 · 点对点 · 加密视频</p>
+  <p class="tagline">私密 · 点对点 · 无服务器</p>
 
   <div class="card">
     <div class="input-group">
       <label>你的昵称</label>
-      <input type="text" id="myName" placeholder="例如：宝贝" maxlength="20" value="">
+      <input type="text" id="myName" placeholder="例如：宝贝" maxlength="20">
     </div>
 
-    <div class="divider">创建或加入通话</div>
-
-    <button class="btn btn-primary" id="createBtn">✦ 创建新房间</button>
-
-    <div id="createdRoom" style="display:none; flex-direction:column; gap:10px;">
-      <label>把这个房间码发给对方 👇</label>
-      <div class="copy-wrap">
-        <div class="room-display" id="myRoomId">—</div>
-        <button class="copy-icon-btn" id="copyBtn" title="复制">⧉</button>
-      </div>
-      <button class="btn btn-primary" id="waitBtn">📡 等待对方加入…</button>
-    </div>
-
-    <div class="divider">or</div>
-
-    <div class="input-group">
-      <label>输入房间码加入</label>
+    <!-- STEP 0: 选角色 -->
+    <div id="step0" style="display:flex; flex-direction:column; gap:10px;">
+      <div class="divider">你是哪一方？</div>
       <div class="row">
-        <input type="text" id="joinRoomInput" placeholder="粘贴房间码…" style="flex:1">
-        <button class="btn btn-primary" id="joinBtn" style="flex:0 0 80px">加入</button>
+        <button class="btn btn-primary" id="createBtn">📤 我来发邀请</button>
+        <button class="btn btn-secondary" id="joinStartBtn">📥 我收到邀请</button>
       </div>
+      <p class="info">两人各开这个页面。一人点「发邀请」，生成一段码发给对方；对方粘贴后生成「确认码」发回；再粘贴一次即可通话。</p>
     </div>
 
-    <p class="info">
-      <strong>使用说明：</strong>一人创建房间，把房间码发给对方，对方粘贴后加入。<br>
-      全程点对点加密，无服务器录像。需要摄像头与麦克风权限。
-    </p>
+    <!-- STEP 1 (主机): 复制邀请码 -->
+    <div id="step1host" style="display:none; flex-direction:column; gap:12px;">
+      <label>① 复制下面的「邀请码」，用微信/短信发给对方 👇</label>
+      <div class="copy-wrap">
+        <div class="room-display" id="offerText" style="font-size:0.7rem; max-height:80px; overflow:auto; text-align:left; word-break:break-all;">生成中…</div>
+        <button class="copy-icon-btn" id="copyOfferBtn" title="复制">⧉</button>
+      </div>
+      <label>② 对方发回「确认码」后，粘贴到这里 👇</label>
+      <textarea id="answerInput" placeholder="粘贴对方的确认码…"
+        style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;
+               color:#f0dde4;font-family:'DM Sans',sans-serif;font-size:0.82rem;
+               padding:10px 14px;outline:none;resize:vertical;min-height:70px;width:100%;"></textarea>
+      <button class="btn btn-primary" id="connectBtn">🔗 建立通话</button>
+    </div>
+
+    <!-- STEP 1 (接入方): 粘贴邀请码 -->
+    <div id="step1joiner" style="display:none; flex-direction:column; gap:12px;">
+      <label>① 把对方发来的「邀请码」粘贴到这里 👇</label>
+      <textarea id="offerInput" placeholder="粘贴邀请码…"
+        style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;
+               color:#f0dde4;font-family:'DM Sans',sans-serif;font-size:0.82rem;
+               padding:10px 14px;outline:none;resize:vertical;min-height:70px;width:100%;"></textarea>
+      <button class="btn btn-primary" id="genAnswerBtn">⚡ 生成确认码</button>
+      <div id="answerArea" style="display:none; flex-direction:column; gap:10px;">
+        <label>② 复制下面的「确认码」发回给对方 👇</label>
+        <div class="copy-wrap">
+          <div class="room-display" id="answerText" style="font-size:0.7rem; max-height:80px; overflow:auto; text-align:left; word-break:break-all;"></div>
+          <button class="copy-icon-btn" id="copyAnswerBtn" title="复制">⧉</button>
+        </div>
+        <p class="info" style="color:rgba(240,221,228,0.55);">对方粘贴确认码后即可通话，稍等片刻…</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -368,7 +383,12 @@
 
   <div class="connecting-overlay" id="connectingOverlay">
     <div class="spinner"></div>
-    <div class="connecting-text">正在连接…</div>
+    <div class="connecting-text" id="connectingMsg">正在连接…</div>
+    <!-- 接入方：在通话画面内也能复制确认码 -->
+    <button class="btn btn-secondary" id="copyAnswerCallBtn"
+      style="display:none; margin-top:8px; max-width:260px; font-size:0.82rem;">
+      ⧉ 复制确认码（再发给对方一次）
+    </button>
   </div>
 
   <div class="status-bar">
@@ -425,15 +445,10 @@ function showScreen(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  SIGNALING via BroadcastChannel (same-origin tab) +
-//  localStorage polling (cross-device via shared storage server)
-//
-//  ⚠️  For cross-device use we need a real signaling relay.
-//      We use a free public TURN/signaling trick:
-//      peer data is stored at a public pastebin-style API.
-//      Here we use https://api.jsonbin.io  (free, no auth needed for anonymous bins)
-//      OR the simpler approach: localStorage for local testing,
-//      with a manual "copy offer/answer" fallback shown below.
+//  SIGNALING: Manual SDP Exchange
+//  无需服务器、无需 API Key。
+//  流程：主机复制「邀请码」发给对方 → 对方粘贴生成「确认码」→
+//        主机粘贴「确认码」→ 通话建立。全程用微信/短信传两次文本。
 // ═══════════════════════════════════════════════════════
 
 const ICE_SERVERS = [
@@ -445,49 +460,38 @@ const ICE_SERVERS = [
   { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
-// ── Signaling backend: jsonbin.io anonymous bins ──
-const SIGNAL_BASE = 'https://api.jsonbin.io/v3/b';
-const HEADERS = { 'Content-Type': 'application/json' };
-
-async function createBin(data) {
-  const r = await fetch(SIGNAL_BASE, {
-    method: 'POST',
-    headers: { ...HEADERS, 'X-Bin-Private': 'false' },
-    body: JSON.stringify(data)
-  });
-  const j = await r.json();
-  return j.metadata.id; // bin ID = room code
-}
-
-async function readBin(id) {
-  const r = await fetch(`${SIGNAL_BASE}/${id}/latest`, { headers: HEADERS });
-  if (!r.ok) return null;
-  const j = await r.json();
-  return j.record;
-}
-
-async function updateBin(id, data) {
-  await fetch(`${SIGNAL_BASE}/${id}`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify(data)
-  });
-}
-
 // ═══════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════
 let pc = null;
 let localStream = null;
-let roomId = null;
-let isHost = false;
 let callStartTime = null;
 let timerInterval = null;
-let pollInterval = null;
 let muted = false;
 let camOff = false;
 
-// ─── GET MEDIA ───────────────────────────────────────
+// ─── HELPERS ─────────────────────────────────────────
+function encode(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function decode(str) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
+  catch { return null; }
+}
+
+function copyText(text, label) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => toast(`✓ ${label}已复制`)).catch(() => fallbackCopy(text, label));
+  } else { fallbackCopy(text, label); }
+}
+function fallbackCopy(text, label) {
+  // create temp textarea for iOS
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); toast(`✓ ${label}已复制`); }
+  catch { toast('请长按手动复制'); }
+  document.body.removeChild(ta);
+}
+
 async function getLocalMedia() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
@@ -497,164 +501,144 @@ async function getLocalMedia() {
     document.getElementById('localVideo').srcObject = localStream;
     return true;
   } catch (e) {
-    toast('⚠️ 无法获取摄像头/麦克风权限，请在浏览器设置中允许。');
+    toast('⚠️ 请在浏览器弹窗中允许摄像头和麦克风权限');
     return false;
   }
 }
 
-// ─── CREATE PC ───────────────────────────────────────
-function createPeerConnection() {
+async function gatherICE() {
+  return new Promise(res => {
+    if (pc.iceGatheringState === 'complete') { res(); return; }
+    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
+    setTimeout(res, 5000); // 最多等 5 秒
+  });
+}
+
+function createPC() {
   if (pc) { pc.close(); pc = null; }
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
   pc.ontrack = e => {
     document.getElementById('remoteVideo').srcObject = e.streams[0];
     document.getElementById('connectingOverlay').classList.add('hidden');
     startTimer();
   };
-
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-      toast('连接断开，请检查网络。');
-    }
+    if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')
+      toast('连接中断，请检查网络');
   };
-
-  return pc;
 }
 
-// ─── CALL TIMER ─────────────────────────────────────
 function startTimer() {
   callStartTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const s = Math.floor((Date.now() - callStartTime) / 1000);
-    const m = Math.floor(s / 60).toString().padStart(2,'0');
-    const sec = (s % 60).toString().padStart(2,'0');
-    document.getElementById('callTimer').textContent = `${m}:${sec}`;
+    document.getElementById('callTimer').textContent =
+      `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
   }, 1000);
 }
 
-// ─── HANGUP ─────────────────────────────────────────
 function hangup() {
   clearInterval(timerInterval);
-  clearInterval(pollInterval);
   if (pc) { pc.close(); pc = null; }
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = null;
-  roomId = null; isHost = false;
-  document.getElementById('createdRoom').style.display = 'none';
-  document.getElementById('myRoomId').textContent = '—';
+  // reset UI
+  ['step1host','step1joiner'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('step0').style.display = 'flex';
+  document.getElementById('answerArea').style.display = 'none';
+  document.getElementById('offerInput').value = '';
+  document.getElementById('answerInput').value = '';
   showScreen('lobby');
   toast('通话已结束 💔');
 }
 
 // ═══════════════════════════════════════════════════════
-//  HOST FLOW
+//  LOBBY — 角色选择
 // ═══════════════════════════════════════════════════════
 document.getElementById('createBtn').addEventListener('click', async () => {
-  const name = document.getElementById('myName').value.trim() || '宝贝';
   if (!await getLocalMedia()) return;
+  document.getElementById('step0').style.display = 'none';
+  document.getElementById('step1host').style.display = 'flex';
+  document.getElementById('offerText').textContent = '正在生成邀请码，请稍候…';
 
-  // 1. Create PC & offer
-  createPeerConnection();
+  createPC();
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
+  await gatherICE();
 
-  // 2. Wait for all ICE candidates
-  await new Promise(res => {
-    if (pc.iceGatheringState === 'complete') { res(); return; }
-    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
-    setTimeout(res, 4000); // fallback
-  });
+  const name = document.getElementById('myName').value.trim() || '宝贝';
+  const code = encode({ sdp: pc.localDescription, name });
+  document.getElementById('offerText').textContent = code;
+});
 
-  // 3. Store offer in bin → get room ID
+document.getElementById('copyOfferBtn').addEventListener('click', () => {
+  copyText(document.getElementById('offerText').textContent, '邀请码');
+});
+
+// 主机：粘贴确认码 → 建立连接
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  const raw = document.getElementById('answerInput').value.trim();
+  if (!raw) { toast('请先粘贴对方的确认码'); return; }
+  const parsed = decode(raw);
+  if (!parsed?.sdp) { toast('确认码格式不对，请重新复制'); return; }
+
   try {
-    const binId = await createBin({ offer: pc.localDescription, offerName: name, answer: null });
-    roomId = binId;
-    isHost = true;
-
-    document.getElementById('myRoomId').textContent = roomId;
-    document.getElementById('createdRoom').style.display = 'flex';
-    document.getElementById('createBtn').style.display = 'none';
-
+    await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
+    document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
     showScreen('callscreen');
     document.getElementById('connectingOverlay').classList.remove('hidden');
-    document.getElementById('peerNameDisplay').textContent = '等待对方…';
-
-    // Poll for answer
-    pollInterval = setInterval(async () => {
-      const data = await readBin(roomId);
-      if (data && data.answer) {
-        clearInterval(pollInterval);
-        document.getElementById('peerNameDisplay').textContent = data.answerName || '对方';
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      }
-    }, 2500);
-
+    toast('连接中，等待视频建立…');
   } catch(e) {
-    toast('创建房间失败，请检查网络连接。');
-    hangup();
-  }
-});
-
-// ─── WAIT BTN (copy room id again) ─────────────────
-document.getElementById('waitBtn').addEventListener('click', () => {
-  if (roomId) {
-    navigator.clipboard?.writeText(roomId).catch(()=>{});
-    toast('房间码已复制！发给对方吧 💌');
-  }
-});
-
-document.getElementById('copyBtn').addEventListener('click', () => {
-  const id = document.getElementById('myRoomId').textContent;
-  if (id && id !== '—') {
-    navigator.clipboard?.writeText(id)
-      .then(() => toast('✓ 房间码已复制'))
-      .catch(() => toast('请手动复制：' + id));
+    toast('连接失败，请确认对方的确认码是否完整');
   }
 });
 
 // ═══════════════════════════════════════════════════════
-//  JOINER FLOW
+//  接入方流程
 // ═══════════════════════════════════════════════════════
-document.getElementById('joinBtn').addEventListener('click', async () => {
-  const rid = document.getElementById('joinRoomInput').value.trim();
-  const name = document.getElementById('myName').value.trim() || '宝贝';
-  if (!rid) { toast('请先输入房间码'); return; }
+document.getElementById('joinStartBtn').addEventListener('click', () => {
+  document.getElementById('step0').style.display = 'none';
+  document.getElementById('step1joiner').style.display = 'flex';
+});
+
+document.getElementById('genAnswerBtn').addEventListener('click', async () => {
+  const raw = document.getElementById('offerInput').value.trim();
+  if (!raw) { toast('请先粘贴邀请码'); return; }
+  const parsed = decode(raw);
+  if (!parsed?.sdp) { toast('邀请码格式不对，请重新复制'); return; }
+
   if (!await getLocalMedia()) return;
+
+  document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
+  createPC();
+  await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await gatherICE();
+
+  const name = document.getElementById('myName').value.trim() || '宝贝';
+  const code = encode({ sdp: pc.localDescription, name });
+  document.getElementById('answerText').textContent = code;
+  document.getElementById('answerArea').style.display = 'flex';
 
   showScreen('callscreen');
   document.getElementById('connectingOverlay').classList.remove('hidden');
+  document.getElementById('connectingMsg').textContent = '等待对方粘贴确认码…';
+  document.getElementById('copyAnswerCallBtn').style.display = 'block';
+  document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
+  toast('已生成确认码，把它发给对方！');
+});
 
-  try {
-    const data = await readBin(rid);
-    if (!data || !data.offer) { toast('房间码无效或已过期'); hangup(); return; }
+document.getElementById('copyAnswerBtn').addEventListener('click', () => {
+  copyText(document.getElementById('answerText').textContent, '确认码');
+});
 
-    document.getElementById('peerNameDisplay').textContent = data.offerName || '对方';
-    roomId = rid;
-
-    createPeerConnection();
-    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-
-    // Wait for ICE
-    await new Promise(res => {
-      if (pc.iceGatheringState === 'complete') { res(); return; }
-      pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
-      setTimeout(res, 4000);
-    });
-
-    await updateBin(rid, { ...data, answer: pc.localDescription, answerName: name });
-    toast('✓ 已发送连接请求，等待建立…');
-
-  } catch(e) {
-    toast('连接失败，请检查房间码或网络。');
-    hangup();
-  }
+// 通话画面内的复制确认码按钮（接入方专用）
+document.getElementById('copyAnswerCallBtn').addEventListener('click', () => {
+  copyText(document.getElementById('answerText').textContent, '确认码');
 });
 
 // ═══════════════════════════════════════════════════════
@@ -678,13 +662,6 @@ document.getElementById('camBtn').addEventListener('click', () => {
   document.getElementById('camBtn').textContent = camOff ? '🚫' : '📷';
   document.getElementById('camBtn').classList.toggle('muted', camOff);
   toast(camOff ? '摄像头已关闭' : '摄像头已开启');
-});
-
-// ═══════════════════════════════════════════════════════
-//  ENTER KEY support
-// ═══════════════════════════════════════════════════════
-document.getElementById('joinRoomInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('joinBtn').click();
 });
 </script>
 </body>
