@@ -312,6 +312,74 @@
   .info { font-size: 0.75rem; color: rgba(240,221,228,0.4); line-height: 1.6; text-align: center; }
   .info a { color: var(--rose); text-decoration: none; }
   .info strong { color: rgba(240,221,228,0.65); }
+
+  /* options */
+  .checkline {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 0.74rem; color: rgba(240,221,228,0.52); line-height: 1.45;
+    cursor: pointer; user-select: none;
+  }
+  .checkline input { margin-top: 2px; accent-color: var(--rose); }
+  .tiny-note { font-size: 0.68rem; color: rgba(240,221,228,0.35); text-align: center; line-height: 1.45; }
+
+  /* chat */
+  .chat-panel {
+    position: absolute; left: 14px; right: 14px; bottom: 122px; z-index: 36;
+    max-height: 42vh; min-height: 160px;
+    display: none; flex-direction: column; overflow: hidden;
+    background: rgba(20,8,14,0.78); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: 0 10px 38px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .chat-panel.open { display: flex; }
+  .chat-head {
+    padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+    color: var(--blush); font-size: 0.82rem; border-bottom: 1px solid rgba(232,160,180,0.14);
+  }
+  .chat-close {
+    background: transparent; border: none; color: var(--blush); font-size: 1.2rem; cursor: pointer;
+  }
+  .chat-messages {
+    flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  }
+  .chat-msg {
+    max-width: 78%; padding: 8px 11px; border-radius: 14px;
+    font-size: 0.86rem; line-height: 1.35; word-break: break-word;
+    background: rgba(255,255,255,0.09); color: #f4dfe7; align-self: flex-start;
+  }
+  .chat-msg.me {
+    align-self: flex-end; background: rgba(232,160,180,0.24); color: #fff;
+  }
+  .chat-msg.system {
+    align-self: center; max-width: 90%; background: transparent;
+    color: rgba(240,221,228,0.46); font-size: 0.74rem; padding: 2px 0;
+  }
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 10px; border-top: 1px solid rgba(232,160,180,0.14);
+  }
+  #chatInput {
+    flex: 1; background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+    border-radius: 12px; color: #f0dde4; padding: 10px 12px; outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  }
+  #chatSendBtn {
+    flex: 0 0 64px; padding: 10px 12px; border-radius: 12px;
+  }
+  #chatBadge {
+    position: absolute; top: 7px; right: 8px; width: 8px; height: 8px;
+    border-radius: 50%; background: #ff8ca8; display: none;
+    box-shadow: 0 0 0 3px rgba(255,140,168,0.20);
+  }
+  #chatBadge.show { display: block; }
+
+  @media (max-width: 420px) {
+    .call-controls { gap: 11px; padding-bottom: 28px; }
+    .ctrl-btn { width: 49px; height: 49px; font-size: 1.08rem; }
+    .ctrl-btn.end { width: 58px; height: 58px; font-size: 1.25rem; }
+    #localVideo { bottom: 90px; right: 12px; width: 112px; }
+    .chat-panel { bottom: 104px; left: 10px; right: 10px; }
+  }
+
 </style>
 </head>
 <body>
@@ -338,6 +406,8 @@
         <button class="btn btn-secondary" id="joinStartBtn">📥 我收到邀请</button>
       </div>
       <p class="info">两人各开这个页面。一人点「发邀请」，生成一段码发给对方；对方粘贴后生成「确认码」发回；再粘贴一次即可通话。</p>
+      <label class="checkline"><input type="checkbox" id="compatMode"> 兼容网络模式：只有连不上时再勾选，两边都重新来一次；它更稳，但邀请码/确认码会变长。</label>
+      <p class="tiny-note">默认是短码优先 + 一次性双人锁房；通话建立后会拒绝第二个确认码。</p>
     </div>
 
     <!-- STEP 1 (主机): 复制邀请码 -->
@@ -347,6 +417,7 @@
         <div class="room-display" id="offerText" style="font-size:0.7rem; max-height:80px; overflow:auto; text-align:left; word-break:break-all;">生成中…</div>
         <button class="copy-icon-btn" id="copyOfferBtn" title="复制">⧉</button>
       </div>
+      <p class="tiny-note" id="offerLen">正在计算长度…</p>
       <label>② 对方发回「确认码」后，粘贴到这里 👇</label>
       <textarea id="answerInput" placeholder="粘贴对方的确认码…"
         style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;
@@ -369,6 +440,7 @@
           <div class="room-display" id="answerText" style="font-size:0.7rem; max-height:80px; overflow:auto; text-align:left; word-break:break-all;"></div>
           <button class="copy-icon-btn" id="copyAnswerBtn" title="复制">⧉</button>
         </div>
+        <p class="tiny-note" id="answerLen">正在计算长度…</p>
         <p class="info" style="color:rgba(240,221,228,0.55);">对方粘贴确认码后即可通话，稍等片刻…</p>
       </div>
     </div>
@@ -379,6 +451,8 @@
 <div class="screen hidden" id="callscreen">
   <video id="remoteVideo" autoplay playsinline></video>
   <video id="localVideo"  autoplay playsinline muted></video>
+  <video id="beautySource" autoplay playsinline muted style="display:none"></video>
+  <canvas id="beautyCanvas" style="display:none"></canvas>
   <div class="call-overlay"></div>
 
   <div class="connecting-overlay" id="connectingOverlay">
@@ -396,15 +470,27 @@
     <span class="status-dot"><span class="dot"></span> <span id="callTimer">00:00</span></span>
   </div>
 
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-head"><span>💬 文字聊天</span><button class="chat-close" id="chatCloseBtn" title="关闭">×</button></div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="输入消息…" maxlength="300" disabled>
+      <button class="btn btn-primary" id="chatSendBtn" disabled>发送</button>
+    </div>
+  </div>
+
   <div class="call-controls">
+    <button class="ctrl-btn normal" id="beautyBtn" title="轻美颜">✨</button>
     <button class="ctrl-btn normal" id="muteBtn" title="静音">🎙️</button>
     <button class="ctrl-btn end"    id="hangupBtn" title="挂断">📵</button>
     <button class="ctrl-btn normal" id="camBtn"  title="摄像头">📷</button>
+    <button class="ctrl-btn normal" id="chatBtn" title="文字聊天">💬<span id="chatBadge"></span></button>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  PARTICLES
@@ -445,16 +531,18 @@ function showScreen(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  SIGNALING: Manual SDP Exchange
+//  SIGNALING: Manual SDP Exchange + short code + lock + chat
 //  无需服务器、无需 API Key。
-//  流程：主机复制「邀请码」发给对方 → 对方粘贴生成「确认码」→
-//        主机粘贴「确认码」→ 通话建立。全程用微信/短信传两次文本。
+//  默认短码优先；连不上时勾选“兼容网络模式”重试。
 // ═══════════════════════════════════════════════════════
 
-const ICE_SERVERS = [
+const ICE_SERVERS_SHORT = [
   { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
+const ICE_SERVERS_COMPAT = [
+  ...ICE_SERVERS_SHORT,
   { urls: 'turn:openrelay.metered.ca:80',   username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443',  username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
@@ -464,26 +552,84 @@ const ICE_SERVERS = [
 //  STATE
 // ═══════════════════════════════════════════════════════
 let pc = null;
+let rawStream = null;
 let localStream = null;
 let callStartTime = null;
 let timerInterval = null;
 let muted = false;
 let camOff = false;
+let hostSessionId = null;
+let joinSessionId = null;
+let answerAlreadyUsed = false;
+let chatChannel = null;
+let unreadChat = 0;
+let beautyEnabled = false;
+let beautyVideoTrack = null;
+let beautyFrame = null;
 
 // ─── HELPERS ─────────────────────────────────────────
-function encode(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function getName() {
+  return document.getElementById('myName').value.trim() || '宝贝';
+}
+
+function randomId(len = 18) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const arr = new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, n => chars[n % chars.length]).join('');
+}
+
+function getIceServers() {
+  return document.getElementById('compatMode')?.checked ? ICE_SERVERS_COMPAT : ICE_SERVERS_SHORT;
+}
+
+function cleanCode(str) {
+  return (str || '').trim().replace(/\s+/g, '');
+}
+
+function encode(obj) {
+  const json = JSON.stringify(obj);
+  if (window.LZString) {
+    return 'LC1.' + LZString.compressToEncodedURIComponent(json);
+  }
+  return 'LC0.' + btoa(unescape(encodeURIComponent(json)));
+}
+
 function decode(str) {
-  try { return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
-  catch { return null; }
+  const code = cleanCode(str);
+  try {
+    if (code.startsWith('LC1.')) {
+      if (!window.LZString) return null;
+      const json = LZString.decompressFromEncodedURIComponent(code.slice(4));
+      return JSON.parse(json);
+    }
+    if (code.startsWith('LC0.')) {
+      return JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));
+    }
+    // 兼容你上一版没有 LC 前缀的旧码
+    return JSON.parse(decodeURIComponent(escape(atob(code))));
+  } catch {
+    return null;
+  }
+}
+
+function setCode(elId, lenId, code, label) {
+  document.getElementById(elId).textContent = code;
+  const lenEl = document.getElementById(lenId);
+  if (lenEl) {
+    const mode = document.getElementById('compatMode')?.checked ? '兼容网络模式，码会更长' : '短码优先模式';
+    lenEl.textContent = `${label}长度：${code.length} 个字符｜${mode}`;
+  }
 }
 
 function copyText(text, label) {
+  const t = cleanCode(text);
+  if (!t || t.includes('生成中')) { toast(`${label}还没生成`); return; }
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => toast(`✓ ${label}已复制`)).catch(() => fallbackCopy(text, label));
-  } else { fallbackCopy(text, label); }
+    navigator.clipboard.writeText(t).then(() => toast(`✓ ${label}已复制`)).catch(() => fallbackCopy(t, label));
+  } else { fallbackCopy(t, label); }
 }
 function fallbackCopy(text, label) {
-  // create temp textarea for iOS
   const ta = document.createElement('textarea');
   ta.value = text; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
   document.body.appendChild(ta); ta.focus(); ta.select();
@@ -492,13 +638,30 @@ function fallbackCopy(text, label) {
   document.body.removeChild(ta);
 }
 
+function showConnecting(msg) {
+  document.getElementById('connectingMsg').textContent = msg || '正在连接…';
+  document.getElementById('connectingOverlay').classList.remove('hidden');
+}
+
+function markConnected() {
+  document.getElementById('connectingOverlay').classList.add('hidden');
+  document.getElementById('copyAnswerCallBtn').style.display = 'none';
+  if (!callStartTime) startTimer();
+}
+
+function rebuildLocalStream(videoTrack) {
+  const audioTrack = rawStream?.getAudioTracks?.()[0];
+  localStream = new MediaStream([videoTrack, audioTrack].filter(Boolean));
+  document.getElementById('localVideo').srcObject = localStream;
+}
+
 async function getLocalMedia() {
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: { echoCancellation: true, noiseSuppression: true }
+    rawStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
-    document.getElementById('localVideo').srcObject = localStream;
+    rebuildLocalStream(rawStream.getVideoTracks()[0]);
     return true;
   } catch (e) {
     toast('⚠️ 请在浏览器弹窗中允许摄像头和麦克风权限');
@@ -510,23 +673,45 @@ async function gatherICE() {
   return new Promise(res => {
     if (pc.iceGatheringState === 'complete') { res(); return; }
     pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
-    setTimeout(res, 5000); // 最多等 5 秒
+    setTimeout(res, 4500);
   });
 }
 
-function createPC() {
+function createPC(role) {
   if (pc) { pc.close(); pc = null; }
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  pc = new RTCPeerConnection({ iceServers: getIceServers() });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  if (role === 'host') {
+    chatChannel = pc.createDataChannel('lovechat');
+    setupChatChannel(chatChannel);
+  } else {
+    pc.ondatachannel = e => setupChatChannel(e.channel);
+  }
+
   pc.ontrack = e => {
-    document.getElementById('remoteVideo').srcObject = e.streams[0];
-    document.getElementById('connectingOverlay').classList.add('hidden');
-    startTimer();
+    const rv = document.getElementById('remoteVideo');
+    if (rv.srcObject !== e.streams[0]) rv.srcObject = e.streams[0];
+    rv.play?.().catch(() => {});
+    markConnected();
   };
+
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'connected') markConnected();
+    if (pc.connectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
+    if (pc.connectionState === 'disconnected') toast('连接中断，请检查网络');
+  };
+
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')
-      toast('连接中断，请检查网络');
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') markConnected();
+    if (pc.iceConnectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
   };
+}
+
+function replaceOutgoingVideo(track) {
+  if (!pc || !track) return;
+  const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+  if (sender) sender.replaceTrack(track).catch(() => toast('切换视频效果失败'));
 }
 
 function startTimer() {
@@ -539,20 +724,155 @@ function startTimer() {
   }, 1000);
 }
 
+function resetChat() {
+  chatChannel = null; unreadChat = 0;
+  document.getElementById('chatBadge').classList.remove('show');
+  document.getElementById('chatPanel').classList.remove('open');
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('chatInput').value = '';
+  document.getElementById('chatInput').disabled = true;
+  document.getElementById('chatSendBtn').disabled = true;
+}
+
+function stopBeauty() {
+  beautyEnabled = false;
+  if (beautyFrame) cancelAnimationFrame(beautyFrame);
+  beautyFrame = null;
+  if (beautyVideoTrack) { try { beautyVideoTrack.stop(); } catch {} }
+  beautyVideoTrack = null;
+  if (rawStream?.getVideoTracks?.()[0]) {
+    rebuildLocalStream(rawStream.getVideoTracks()[0]);
+    replaceOutgoingVideo(rawStream.getVideoTracks()[0]);
+  }
+  document.getElementById('localVideo').style.filter = '';
+  document.getElementById('beautyBtn').classList.remove('muted');
+  document.getElementById('beautyBtn').textContent = '✨';
+}
+
 function hangup() {
-  clearInterval(timerInterval);
+  clearInterval(timerInterval); timerInterval = null; callStartTime = null;
   if (pc) { pc.close(); pc = null; }
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (beautyFrame) cancelAnimationFrame(beautyFrame);
+  if (beautyVideoTrack) { try { beautyVideoTrack.stop(); } catch {} }
+  beautyVideoTrack = null; beautyEnabled = false;
+  if (rawStream) { rawStream.getTracks().forEach(t => t.stop()); rawStream = null; }
+  if (localStream) { localStream.getTracks().forEach(t => { if (t.readyState !== 'ended') t.stop(); }); localStream = null; }
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = null;
-  // reset UI
+  document.getElementById('beautySource').srcObject = null;
+  hostSessionId = null; joinSessionId = null; answerAlreadyUsed = false;
+  muted = false; camOff = false;
+  resetChat();
   ['step1host','step1joiner'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('step0').style.display = 'flex';
   document.getElementById('answerArea').style.display = 'none';
   document.getElementById('offerInput').value = '';
   document.getElementById('answerInput').value = '';
+  document.getElementById('connectBtn').disabled = false;
+  document.getElementById('connectBtn').style.opacity = '1';
+  document.getElementById('beautyBtn').classList.remove('muted');
+  document.getElementById('beautyBtn').textContent = '✨';
+  document.getElementById('muteBtn').textContent = '🎙️';
+  document.getElementById('camBtn').textContent = '📷';
+  document.getElementById('muteBtn').classList.remove('muted');
+  document.getElementById('camBtn').classList.remove('muted');
   showScreen('lobby');
   toast('通话已结束 💔');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════
+function setupChatChannel(dc) {
+  chatChannel = dc;
+  dc.onopen = () => {
+    document.getElementById('chatInput').disabled = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    appendChat('system', '文字聊天已连接');
+  };
+  dc.onclose = () => appendChat('system', '文字聊天已断开');
+  dc.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'chat') appendChat('peer', msg.text);
+    } catch {
+      appendChat('peer', String(e.data || ''));
+    }
+  };
+}
+
+function appendChat(who, text) {
+  const box = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = who === 'me' ? 'chat-msg me' : who === 'system' ? 'chat-msg system' : 'chat-msg';
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  if (who === 'peer' && !document.getElementById('chatPanel').classList.contains('open')) {
+    unreadChat++;
+    document.getElementById('chatBadge').classList.add('show');
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!chatChannel || chatChannel.readyState !== 'open') { toast('文字聊天还没连接好'); return; }
+  chatChannel.send(JSON.stringify({ type: 'chat', text, t: Date.now() }));
+  appendChat('me', text);
+  input.value = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  BEAUTY: 轻量 Canvas 美颜，不跑人脸识别，尽量减少发热
+// ═══════════════════════════════════════════════════════
+async function toggleBeauty() {
+  if (!rawStream) { toast('先进入通话或先允许摄像头'); return; }
+  if (beautyEnabled) { stopBeauty(); toast('已关闭轻美颜'); return; }
+
+  const rawTrack = rawStream.getVideoTracks()[0];
+  const canvas = document.getElementById('beautyCanvas');
+  const source = document.getElementById('beautySource');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  if (!canvas.captureStream || !ctx) {
+    document.getElementById('localVideo').style.filter = 'brightness(1.07) contrast(1.03) saturate(1.08) blur(0.35px)';
+    beautyEnabled = true;
+    document.getElementById('beautyBtn').classList.add('muted');
+    document.getElementById('beautyBtn').textContent = '✨✓';
+    toast('当前浏览器只支持本地预览轻美颜');
+    return;
+  }
+
+  const s = rawTrack.getSettings ? rawTrack.getSettings() : {};
+  canvas.width = Math.min(640, s.width || 640);
+  canvas.height = Math.min(480, s.height || 480);
+  source.srcObject = rawStream;
+  await source.play().catch(() => {});
+
+  beautyEnabled = true;
+  let last = 0;
+  const draw = (ts) => {
+    if (!beautyEnabled) return;
+    if (ts - last > 50) { // 约 20fps，降低手机发热
+      last = ts;
+      ctx.save();
+      ctx.filter = 'brightness(1.07) contrast(1.025) saturate(1.08) blur(0.45px)';
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    }
+    beautyFrame = requestAnimationFrame(draw);
+  };
+  beautyFrame = requestAnimationFrame(draw);
+
+  beautyVideoTrack = canvas.captureStream(20).getVideoTracks()[0];
+  if (camOff) beautyVideoTrack.enabled = false;
+  rebuildLocalStream(beautyVideoTrack);
+  replaceOutgoingVideo(beautyVideoTrack);
+  document.getElementById('beautyBtn').classList.add('muted');
+  document.getElementById('beautyBtn').textContent = '✨✓';
+  toast('已开启轻美颜');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -563,34 +883,43 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   document.getElementById('step0').style.display = 'none';
   document.getElementById('step1host').style.display = 'flex';
   document.getElementById('offerText').textContent = '正在生成邀请码，请稍候…';
+  document.getElementById('offerLen').textContent = '正在计算长度…';
+  document.getElementById('connectBtn').disabled = false;
+  document.getElementById('connectBtn').style.opacity = '1';
+  answerAlreadyUsed = false;
+  hostSessionId = randomId();
 
-  createPC();
+  createPC('host');
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   await gatherICE();
 
-  const name = document.getElementById('myName').value.trim() || '宝贝';
-  const code = encode({ sdp: pc.localDescription, name });
-  document.getElementById('offerText').textContent = code;
+  const code = encode({ v: 2, type: 'offer', sessionId: hostSessionId, name: getName(), sdp: pc.localDescription });
+  setCode('offerText', 'offerLen', code, '邀请码');
 });
 
 document.getElementById('copyOfferBtn').addEventListener('click', () => {
   copyText(document.getElementById('offerText').textContent, '邀请码');
 });
 
-// 主机：粘贴确认码 → 建立连接
+// 主机：粘贴确认码 → 建立连接，并锁定为两人通话
 document.getElementById('connectBtn').addEventListener('click', async () => {
+  if (answerAlreadyUsed) { toast('这个邀请已经锁定，不能再接入第三个人'); return; }
   const raw = document.getElementById('answerInput').value.trim();
   if (!raw) { toast('请先粘贴对方的确认码'); return; }
   const parsed = decode(raw);
-  if (!parsed?.sdp) { toast('确认码格式不对，请重新复制'); return; }
+  if (!parsed?.sdp || parsed.type !== 'answer') { toast('确认码格式不对，请重新复制'); return; }
+  if (parsed.sessionId !== hostSessionId) { toast('确认码不属于这个邀请，已拒绝'); return; }
 
   try {
+    showScreen('callscreen');
+    showConnecting('连接中，等待视频建立…');
     await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
     document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
-    showScreen('callscreen');
-    document.getElementById('connectingOverlay').classList.remove('hidden');
-    toast('连接中，等待视频建立…');
+    answerAlreadyUsed = true;
+    document.getElementById('connectBtn').disabled = true;
+    document.getElementById('connectBtn').style.opacity = '0.55';
+    toast('已锁定两人通话');
   } catch(e) {
     toast('连接失败，请确认对方的确认码是否完整');
   }
@@ -608,35 +937,42 @@ document.getElementById('genAnswerBtn').addEventListener('click', async () => {
   const raw = document.getElementById('offerInput').value.trim();
   if (!raw) { toast('请先粘贴邀请码'); return; }
   const parsed = decode(raw);
-  if (!parsed?.sdp) { toast('邀请码格式不对，请重新复制'); return; }
+  if (!parsed?.sdp || parsed.type !== 'offer') { toast('邀请码格式不对，请重新复制'); return; }
 
   if (!await getLocalMedia()) return;
-
+  joinSessionId = parsed.sessionId;
   document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
-  createPC();
-  await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  await gatherICE();
-
-  const name = document.getElementById('myName').value.trim() || '宝贝';
-  const code = encode({ sdp: pc.localDescription, name });
-  document.getElementById('answerText').textContent = code;
-  document.getElementById('answerArea').style.display = 'flex';
-
   showScreen('callscreen');
-  document.getElementById('connectingOverlay').classList.remove('hidden');
-  document.getElementById('connectingMsg').textContent = '等待对方粘贴确认码…';
-  document.getElementById('copyAnswerCallBtn').style.display = 'block';
-  document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
-  toast('已生成确认码，把它发给对方！');
+  showConnecting('正在生成确认码…');
+  document.getElementById('copyAnswerCallBtn').style.display = 'none';
+
+  try {
+    createPC('joiner');
+    await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await gatherICE();
+
+    const code = encode({ v: 2, type: 'answer', sessionId: joinSessionId, name: getName(), sdp: pc.localDescription });
+    setCode('answerText', 'answerLen', code, '确认码');
+    document.getElementById('answerArea').style.display = 'flex';
+    document.getElementById('copyAnswerCallBtn').style.display = 'block';
+    document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
+    document.getElementById('connectingMsg').textContent = '确认码已生成，复制发给对方；对方粘贴后会自动进入通话';
+    toast('已生成确认码，把它发给对方！');
+
+    // 如果远端轨道已经提前到了，不要再把等待层盖回去
+    if (document.getElementById('remoteVideo').srcObject || pc.connectionState === 'connected') markConnected();
+  } catch(e) {
+    toast('生成确认码失败，请重新复制邀请码');
+    hangup();
+  }
 });
 
 document.getElementById('copyAnswerBtn').addEventListener('click', () => {
   copyText(document.getElementById('answerText').textContent, '确认码');
 });
 
-// 通话画面内的复制确认码按钮（接入方专用）
 document.getElementById('copyAnswerCallBtn').addEventListener('click', () => {
   copyText(document.getElementById('answerText').textContent, '确认码');
 });
@@ -645,23 +981,45 @@ document.getElementById('copyAnswerCallBtn').addEventListener('click', () => {
 //  CALL CONTROLS
 // ═══════════════════════════════════════════════════════
 document.getElementById('hangupBtn').addEventListener('click', hangup);
+document.getElementById('beautyBtn').addEventListener('click', toggleBeauty);
 
 document.getElementById('muteBtn').addEventListener('click', () => {
-  if (!localStream) return;
+  if (!rawStream) return;
   muted = !muted;
-  localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+  rawStream.getAudioTracks().forEach(t => t.enabled = !muted);
+  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !muted);
   document.getElementById('muteBtn').textContent = muted ? '🔇' : '🎙️';
   document.getElementById('muteBtn').classList.toggle('muted', muted);
   toast(muted ? '已静音' : '已取消静音');
 });
 
 document.getElementById('camBtn').addEventListener('click', () => {
-  if (!localStream) return;
+  if (!rawStream) return;
   camOff = !camOff;
-  localStream.getVideoTracks().forEach(t => t.enabled = !camOff);
+  rawStream.getVideoTracks().forEach(t => t.enabled = !camOff);
+  if (beautyVideoTrack) beautyVideoTrack.enabled = !camOff;
+  if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = !camOff);
   document.getElementById('camBtn').textContent = camOff ? '🚫' : '📷';
   document.getElementById('camBtn').classList.toggle('muted', camOff);
   toast(camOff ? '摄像头已关闭' : '摄像头已开启');
+});
+
+document.getElementById('chatBtn').addEventListener('click', () => {
+  const panel = document.getElementById('chatPanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    unreadChat = 0;
+    document.getElementById('chatBadge').classList.remove('show');
+    setTimeout(() => document.getElementById('chatInput').focus(), 80);
+  }
+});
+
+document.getElementById('chatCloseBtn').addEventListener('click', () => {
+  document.getElementById('chatPanel').classList.remove('open');
+});
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChat();
 });
 </script>
 </body>
