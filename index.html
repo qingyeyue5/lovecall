@@ -178,12 +178,16 @@
     justify-content: flex-end;
   }
 
+  #remoteVideo, #localVideo {
+    background: #0d0608;
+    transition: opacity 0.5s, width 0.25s, height 0.25s, inset 0.25s, bottom 0.25s, right 0.25s, border-radius 0.25s, transform 0.25s;
+  }
+
+  /* 默认：对方大窗，自己小窗 */
   #remoteVideo {
     position: absolute; inset: 0; z-index: 0;
     width: 100%; height: 100%;
     object-fit: cover;
-    background: #0d0608;
-    transition: opacity 0.5s;
   }
 
   #localVideo {
@@ -197,9 +201,31 @@
     border: 2px solid rgba(232,160,180,0.5);
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     transform: scaleX(-1);
-    transition: all 0.3s;
   }
   #localVideo:hover { transform: scaleX(-1) scale(1.04); }
+
+  /* 互换：自己大窗，对方小窗 */
+  #callscreen.swapped #localVideo {
+    inset: 0 auto auto 0;
+    width: 100%; height: 100%;
+    border-radius: 0; border: none; box-shadow: none;
+    z-index: 0;
+    aspect-ratio: auto;
+    transform: scaleX(-1);
+  }
+  #callscreen.swapped #localVideo:hover { transform: scaleX(-1); }
+  #callscreen.swapped #remoteVideo {
+    position: absolute;
+    inset: auto 20px 100px auto;
+    z-index: 20;
+    width: clamp(100px, 28vw, 150px);
+    height: auto;
+    aspect-ratio: 3/4;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 2px solid rgba(232,160,180,0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
 
   .call-overlay {
     position: absolute; inset: 0; z-index: 5; pointer-events: none;
@@ -322,65 +348,6 @@
   .checkline input { margin-top: 2px; accent-color: var(--rose); }
   .tiny-note { font-size: 0.68rem; color: rgba(240,221,228,0.35); text-align: center; line-height: 1.45; }
 
-
-
-  /* answer code panel on call screen */
-  .answer-call-panel {
-    position: absolute;
-    left: 14px;
-    right: 14px;
-    top: 72px;
-    z-index: 60;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 18px;
-    background: rgba(20,8,14,0.92);
-    border: 1px solid var(--border);
-    box-shadow: 0 10px 36px rgba(0,0,0,0.45);
-    backdrop-filter: blur(14px);
-  }
-  .answer-call-panel.open { display: flex; }
-  .answer-call-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--blush);
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-  .answer-call-title strong { color: #fff; }
-  .answer-call-close {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.08);
-    color: var(--blush);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  #answerCallText {
-    width: 100%;
-    min-height: 82px;
-    max-height: 130px;
-    resize: vertical;
-    border-radius: 12px;
-    border: 1px dashed var(--border);
-    background: rgba(255,255,255,0.06);
-    color: #f0dde4;
-    padding: 10px 12px;
-    font-size: 0.72rem;
-    line-height: 1.45;
-    word-break: break-all;
-    outline: none;
-  }
-  .answer-call-actions { display: flex; gap: 10px; align-items: center; }
-  .answer-call-actions .btn { padding: 10px 14px; font-size: 0.82rem; }
-  .answer-call-hint { font-size: 0.72rem; color: rgba(240,221,228,0.52); line-height: 1.45; }
-
   /* chat */
   .chat-panel {
     position: absolute; left: 14px; right: 14px; bottom: 122px; z-index: 36;
@@ -431,12 +398,28 @@
   }
   #chatBadge.show { display: block; }
 
+
+  /* beauty controls */
+  .beauty-panel {
+    position: absolute; left: 14px; right: 14px; bottom: 122px; z-index: 37;
+    display: none; flex-direction: column; gap: 8px;
+    background: rgba(20,8,14,0.78); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 38px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .beauty-panel.open { display: flex; }
+  .beauty-row { display: flex; align-items: center; gap: 10px; color: var(--blush); font-size: 0.82rem; }
+  .beauty-row input[type=range] { flex: 1; accent-color: var(--rose); }
+  #beautyValue { min-width: 42px; text-align: right; color: rgba(240,221,228,0.75); }
+
   @media (max-width: 420px) {
     .call-controls { gap: 11px; padding-bottom: 28px; }
     .ctrl-btn { width: 49px; height: 49px; font-size: 1.08rem; }
     .ctrl-btn.end { width: 58px; height: 58px; font-size: 1.25rem; }
     #localVideo { bottom: 90px; right: 12px; width: 112px; }
-    .chat-panel { bottom: 104px; left: 10px; right: 10px; }
+    .chat-panel, .beauty-panel { bottom: 104px; left: 10px; right: 10px; }
+    #callscreen.swapped #remoteVideo { bottom: 90px; right: 12px; width: 112px; }
   }
 
 </style>
@@ -449,7 +432,7 @@
 <!-- LOBBY -->
 <div class="screen" id="lobby">
   <div class="logo">Love<span>Call</span></div>
-  <p class="tagline">私密 · 点对点 · 无服务器 · v6</p>
+  <p class="tagline">私密 · 点对点 · 无服务器 · v7</p>
 
   <div class="card">
     <div class="input-group">
@@ -500,9 +483,7 @@
           <button class="copy-icon-btn" id="copyAnswerBtn" title="复制">⧉</button>
         </div>
         <p class="tiny-note" id="answerLen">正在计算长度…</p>
-        <button class="btn btn-primary" id="waitAfterAnswerBtn">✅ 我已把确认码发给对方，进入等待通话</button>
-        <button class="btn btn-secondary" id="regenAnswerBtn">↻ 重新生成确认码</button>
-        <p class="info" style="color:rgba(240,221,228,0.55);">先复制确认码发回给发起方。发完后再点上面的按钮进入等待通话。</p>
+        <p class="info" style="color:rgba(240,221,228,0.55);">对方粘贴确认码后即可通话，稍等片刻…</p>
       </div>
     </div>
   </div>
@@ -532,18 +513,13 @@
   </div>
 
 
-
-  <div class="answer-call-panel" id="answerCallPanel">
-    <div class="answer-call-title">
-      <span><strong>确认码已生成。</strong>先复制下面这段，发回给发起方；发起方粘贴后才会真正接通。</span>
-      <button class="answer-call-close" id="answerCallCloseBtn" title="收起">×</button>
+  <div class="beauty-panel" id="beautyPanel">
+    <div class="beauty-row">
+      <span>✨ 美颜强度</span>
+      <input type="range" id="beautyStrength" min="0" max="100" value="45">
+      <span id="beautyValue">45%</span>
     </div>
-    <textarea id="answerCallText" readonly placeholder="确认码生成后会出现在这里"></textarea>
-    <div class="answer-call-actions">
-      <button class="btn btn-primary" id="answerCallCopyBtn">⧉ 复制确认码</button>
-      <button class="btn btn-secondary" id="answerCallSelectBtn">手动选中</button>
-    </div>
-    <div class="answer-call-hint" id="answerCallHint">如果 iPhone 没自动复制，点“手动选中”后长按文字复制。</div>
+    <p class="tiny-note" style="text-align:left;">轻量磨皮 + 提亮 + 微红润；不会拉长画面。强度太高会更耗电，iPhone 建议 35%～55%。</p>
   </div>
 
   <div class="chat-panel" id="chatPanel">
@@ -556,10 +532,12 @@
   </div>
 
   <div class="call-controls">
-    <button class="ctrl-btn normal" id="beautyBtn" title="轻美颜">✨</button>
+    <button class="ctrl-btn normal" id="swapBtn" title="切换大小窗">⇄</button>
+    <button class="ctrl-btn normal" id="beautyBtn" title="轻美颜/强度">✨</button>
     <button class="ctrl-btn normal" id="muteBtn" title="静音">🎙️</button>
     <button class="ctrl-btn end"    id="hangupBtn" title="挂断">📵</button>
     <button class="ctrl-btn normal" id="camBtn"  title="摄像头">📷</button>
+    <button class="ctrl-btn normal" id="pipBtn" title="Safari 画中画/悬浮窗">▣</button>
     <button class="ctrl-btn normal" id="chatBtn" title="文字聊天">💬<span id="chatBadge"></span></button>
   </div>
 </div>
@@ -637,14 +615,14 @@ let camOff = false;
 let hostSessionId = null;
 let joinSessionId = null;
 let answerAlreadyUsed = false;
-let pendingAnswerCode = '';
-let currentRole = '';
-let waitingForHostPaste = false;
 let chatChannel = null;
 let unreadChat = 0;
 let beautyEnabled = false;
 let beautyVideoTrack = null;
 let beautyFrame = null;
+let beautyStrength = 45;
+let tempBeautyCanvas = null;
+let tempBeautyCtx = null;
 
 // ─── HELPERS ─────────────────────────────────────────
 function getName() {
@@ -717,29 +695,6 @@ function fallbackCopy(text, label) {
   document.body.removeChild(ta);
 }
 
-
-function showAnswerCallPanel(code) {
-  const panel = document.getElementById('answerCallPanel');
-  const text = document.getElementById('answerCallText');
-  if (!panel || !text) return;
-  text.value = cleanCode(code);
-  panel.classList.add('open');
-  document.getElementById('copyAnswerCallBtn').style.display = 'block';
-}
-
-function hideAnswerCallPanel() {
-  document.getElementById('answerCallPanel')?.classList.remove('open');
-}
-
-function selectAnswerCallText() {
-  const text = document.getElementById('answerCallText');
-  if (!text) return;
-  text.focus();
-  text.select();
-  if (text.setSelectionRange) text.setSelectionRange(0, text.value.length);
-  toast('已选中确认码，长按可复制');
-}
-
 function showConnecting(msg) {
   document.getElementById('connectingMsg').textContent = msg || '正在连接…';
   document.getElementById('connectingOverlay').classList.remove('hidden');
@@ -747,7 +702,7 @@ function showConnecting(msg) {
 
 function markConnected() {
   document.getElementById('connectingOverlay').classList.add('hidden');
-  // 不自动隐藏确认码面板，避免接收方还没复制就看不到。
+  document.getElementById('copyAnswerCallBtn').style.display = 'none';
   if (!callStartTime) startTimer();
 }
 
@@ -757,12 +712,74 @@ function rebuildLocalStream(videoTrack) {
   document.getElementById('localVideo').srcObject = localStream;
 }
 
+
+function drawVideoCover(ctx, source, targetW, targetH) {
+  const sw = source.videoWidth || targetW;
+  const sh = source.videoHeight || targetH;
+  if (!sw || !sh) return;
+  const scale = Math.max(targetW / sw, targetH / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  const dx = (targetW - dw) / 2;
+  const dy = (targetH - dh) / 2;
+  ctx.drawImage(source, dx, dy, dw, dh);
+}
+
+function resizeBeautyCanvas(canvas, source) {
+  const vw = source.videoWidth || rawStream?.getVideoTracks?.()[0]?.getSettings?.().width || 640;
+  const vh = source.videoHeight || rawStream?.getVideoTracks?.()[0]?.getSettings?.().height || 360;
+  const maxW = 640;
+  const scale = Math.min(1, maxW / vw);
+  const w = Math.max(2, Math.round(vw * scale));
+  const h = Math.max(2, Math.round(vh * scale));
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  if (!tempBeautyCanvas) {
+    tempBeautyCanvas = document.createElement('canvas');
+    tempBeautyCtx = tempBeautyCanvas.getContext('2d', { alpha: false });
+  }
+  if (tempBeautyCanvas.width !== w || tempBeautyCanvas.height !== h) {
+    tempBeautyCanvas.width = w;
+    tempBeautyCanvas.height = h;
+  }
+}
+
+function applyBeautyFrame(source, canvas, ctx) {
+  resizeBeautyCanvas(canvas, source);
+  const w = canvas.width, h = canvas.height;
+  const k = Math.max(0, Math.min(100, beautyStrength)) / 100;
+
+  // 先画清晰原图，保持比例，不拉伸
+  ctx.save();
+  ctx.filter = `brightness(${1 + 0.12*k}) contrast(${1 + 0.035*k}) saturate(${1 + 0.12*k})`;
+  drawVideoCover(ctx, source, w, h);
+  ctx.restore();
+
+  // 再叠一层低透明度模糊图，模拟轻磨皮；强度越高越明显
+  if (tempBeautyCtx && k > 0.02) {
+    tempBeautyCtx.save();
+    tempBeautyCtx.filter = `blur(${1.2 + 2.8*k}px) brightness(${1 + 0.08*k}) saturate(${1 + 0.06*k})`;
+    drawVideoCover(tempBeautyCtx, source, w, h);
+    tempBeautyCtx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = 0.06 + 0.22*k;
+    ctx.drawImage(tempBeautyCanvas, 0, 0, w, h);
+    ctx.restore();
+
+    // 微微提亮和红润，不改变脸型/比例
+    ctx.save();
+    ctx.globalAlpha = 0.025 + 0.055*k;
+    ctx.fillStyle = 'rgba(255, 216, 224, 1)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+}
+
 async function getLocalMedia() {
   try {
-    if (rawStream && rawStream.getTracks().some(t => t.readyState === 'live')) {
-      if (!localStream || !localStream.getVideoTracks().length) rebuildLocalStream(rawStream.getVideoTracks()[0]);
-      return true;
-    }
     rawStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } },
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -775,42 +792,15 @@ async function getLocalMedia() {
   }
 }
 
-async function gatherICE(statusElId = '', label = '网络信息') {
-  const statusEl = statusElId ? document.getElementById(statusElId) : null;
-  const compat = document.getElementById('compatMode')?.checked;
-  const maxWait = compat ? 16000 : 9000;
-  const started = Date.now();
-  if (statusEl) statusEl.textContent = `正在收集${label}，请不要切出页面…`;
-
+async function gatherICE() {
   return new Promise(res => {
-    let done = false;
-    const finish = (reason) => {
-      if (done) return;
-      done = true;
-      clearInterval(ticker);
-      clearTimeout(limit);
-      pc.onicegatheringstatechange = null;
-      if (statusEl) {
-        const sec = Math.max(1, Math.round((Date.now() - started) / 1000));
-        statusEl.textContent = `${label}已生成，用时约 ${sec} 秒。`;
-      }
-      res(reason);
-    };
-    const ticker = setInterval(() => {
-      if (!statusEl) return;
-      const left = Math.max(1, Math.ceil((maxWait - (Date.now() - started)) / 1000));
-      statusEl.textContent = `正在收集${label}，最多还需约 ${left} 秒，请不要切出页面…`;
-    }, 1000);
-    if (pc.iceGatheringState === 'complete') { finish('complete'); return; }
-    pc.onicegatheringstatechange = () => {
-      if (pc.iceGatheringState === 'complete') finish('complete');
-    };
-    const limit = setTimeout(() => finish('timeout'), maxWait);
+    if (pc.iceGatheringState === 'complete') { res(); return; }
+    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
+    setTimeout(res, 4500);
   });
 }
 
 function createPC(role) {
-  currentRole = role || '';
   if (pc) { pc.close(); pc = null; }
   pc = new RTCPeerConnection({ iceServers: getIceServers() });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -830,32 +820,14 @@ function createPC(role) {
   };
 
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'connected') {
-      waitingForHostPaste = false;
-      markConnected();
-    }
-    if (pc.connectionState === 'failed') {
-      if (currentRole === 'joiner' && waitingForHostPaste) {
-        toast('还在等待发起方粘贴确认码；如果超过 30 秒仍没接通，请两边刷新后重来', 5200);
-      } else {
-        toast('连接失败：请两边同时勾选“兼容网络模式”，重新生成邀请码和确认码');
-      }
-    }
+    if (pc.connectionState === 'connected') markConnected();
+    if (pc.connectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
     if (pc.connectionState === 'disconnected') toast('连接中断，请检查网络');
   };
 
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-      waitingForHostPaste = false;
-      markConnected();
-    }
-    if (pc.iceConnectionState === 'failed') {
-      if (currentRole === 'joiner' && waitingForHostPaste) {
-        toast('还在等待发起方粘贴确认码；如果超过 30 秒仍没接通，请两边刷新后重来', 5200);
-      } else {
-        toast('连接失败：请两边同时勾选“兼容网络模式”，重新生成邀请码和确认码');
-      }
-    }
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') markConnected();
+    if (pc.iceConnectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
   };
 }
 
@@ -879,6 +851,7 @@ function resetChat() {
   chatChannel = null; unreadChat = 0;
   document.getElementById('chatBadge').classList.remove('show');
   document.getElementById('chatPanel').classList.remove('open');
+  document.getElementById('beautyPanel')?.classList.remove('open');
   document.getElementById('chatMessages').innerHTML = '';
   document.getElementById('chatInput').value = '';
   document.getElementById('chatInput').disabled = true;
@@ -896,6 +869,7 @@ function stopBeauty() {
     replaceOutgoingVideo(rawStream.getVideoTracks()[0]);
   }
   document.getElementById('localVideo').style.filter = '';
+  document.getElementById('beautyPanel')?.classList.remove('open');
   document.getElementById('beautyBtn').classList.remove('muted');
   document.getElementById('beautyBtn').textContent = '✨';
 }
@@ -910,19 +884,14 @@ function hangup() {
   if (localStream) { localStream.getTracks().forEach(t => { if (t.readyState !== 'ended') t.stop(); }); localStream = null; }
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = null;
+  document.getElementById('callscreen').classList.remove('swapped');
   document.getElementById('beautySource').srcObject = null;
   hostSessionId = null; joinSessionId = null; answerAlreadyUsed = false;
-  pendingAnswerCode = ''; currentRole = ''; waitingForHostPaste = false;
   muted = false; camOff = false;
   resetChat();
   ['step1host','step1joiner'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('step0').style.display = 'flex';
   document.getElementById('answerArea').style.display = 'none';
-  hideAnswerCallPanel();
-  const answerCallTextEl = document.getElementById('answerCallText');
-  if (answerCallTextEl) answerCallTextEl.value = '';
-  const answerTextEl = document.getElementById('answerText');
-  if (answerTextEl) answerTextEl.textContent = '';
   document.getElementById('offerInput').value = '';
   document.getElementById('answerInput').value = '';
   document.getElementById('connectBtn').disabled = false;
@@ -982,19 +951,33 @@ function sendChat() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  BEAUTY: 轻量 Canvas 美颜，不跑人脸识别，尽量减少发热
+//  BEAUTY: 轻量 Canvas 美颜：磨皮/提亮/微红润，不改变画面比例
 // ═══════════════════════════════════════════════════════
 async function toggleBeauty() {
   if (!rawStream) { toast('先进入通话或先允许摄像头'); return; }
-  if (beautyEnabled) { stopBeauty(); toast('已关闭轻美颜'); return; }
 
+  const panel = document.getElementById('beautyPanel');
+  panel.classList.toggle('open');
+
+  if (beautyEnabled) {
+    stopBeauty();
+    toast('已关闭轻美颜');
+    return;
+  }
+  await startBeauty();
+}
+
+async function startBeauty() {
+  if (!rawStream) return;
   const rawTrack = rawStream.getVideoTracks()[0];
   const canvas = document.getElementById('beautyCanvas');
   const source = document.getElementById('beautySource');
   const ctx = canvas.getContext('2d', { alpha: false });
 
   if (!canvas.captureStream || !ctx) {
-    document.getElementById('localVideo').style.filter = 'brightness(1.07) contrast(1.03) saturate(1.08) blur(0.35px)';
+    // 退化方案：只做预览滤镜，不会发给对方；仍然不做拉伸
+    const k = beautyStrength / 100;
+    document.getElementById('localVideo').style.filter = `brightness(${1 + 0.12*k}) contrast(${1 + 0.035*k}) saturate(${1 + 0.12*k})`;
     beautyEnabled = true;
     document.getElementById('beautyBtn').classList.add('muted');
     document.getElementById('beautyBtn').textContent = '✨✓';
@@ -1002,11 +985,9 @@ async function toggleBeauty() {
     return;
   }
 
-  const s = rawTrack.getSettings ? rawTrack.getSettings() : {};
-  canvas.width = Math.min(640, s.width || 640);
-  canvas.height = Math.min(480, s.height || 480);
   source.srcObject = rawStream;
   await source.play().catch(() => {});
+  resizeBeautyCanvas(canvas, source);
 
   beautyEnabled = true;
   let last = 0;
@@ -1014,10 +995,7 @@ async function toggleBeauty() {
     if (!beautyEnabled) return;
     if (ts - last > 50) { // 约 20fps，降低手机发热
       last = ts;
-      ctx.save();
-      ctx.filter = 'brightness(1.07) contrast(1.025) saturate(1.08) blur(0.45px)';
-      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
-      ctx.restore();
+      applyBeautyFrame(source, canvas, ctx);
     }
     beautyFrame = requestAnimationFrame(draw);
   };
@@ -1029,7 +1007,54 @@ async function toggleBeauty() {
   replaceOutgoingVideo(beautyVideoTrack);
   document.getElementById('beautyBtn').classList.add('muted');
   document.getElementById('beautyBtn').textContent = '✨✓';
-  toast('已开启轻美颜');
+  toast('已开启轻美颜，可调节强度');
+}
+
+function updateBeautyStrength(value) {
+  beautyStrength = Number(value) || 0;
+  document.getElementById('beautyValue').textContent = `${beautyStrength}%`;
+  if (beautyEnabled && !beautyVideoTrack) {
+    const k = beautyStrength / 100;
+    document.getElementById('localVideo').style.filter = `brightness(${1 + 0.12*k}) contrast(${1 + 0.035*k}) saturate(${1 + 0.12*k})`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  VIDEO LAYOUT + PICTURE-IN-PICTURE
+// ═══════════════════════════════════════════════════════
+function toggleVideoLayout() {
+  const screen = document.getElementById('callscreen');
+  screen.classList.toggle('swapped');
+  toast(screen.classList.contains('swapped') ? '已切换：自己大窗，对方小窗' : '已切换：对方大窗，自己小窗');
+}
+
+async function openPictureInPicture() {
+  const remote = document.getElementById('remoteVideo');
+  const local = document.getElementById('localVideo');
+  const video = remote.srcObject ? remote : local;
+
+  try { await video.play?.(); } catch {}
+
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      return;
+    }
+    if (video.requestPictureInPicture) {
+      await video.requestPictureInPicture();
+      toast('已开启画中画');
+      return;
+    }
+    if (video.webkitSupportsPresentationMode?.('picture-in-picture') && video.webkitSetPresentationMode) {
+      const mode = video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
+      video.webkitSetPresentationMode(mode);
+      toast(mode === 'picture-in-picture' ? '已开启 Safari 画中画' : '已退出画中画');
+      return;
+    }
+    toast('这个浏览器不支持网页画中画，请用 Safari 或 Chrome/Edge');
+  } catch (e) {
+    toast('画中画开启失败：请先开始通话，并保持视频正在播放');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1049,7 +1074,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   createPC('host');
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
-  await gatherICE('offerLen', '邀请码');
+  await gatherICE();
 
   const code = encode({ v: 2, type: 'offer', sessionId: hostSessionId, name: getName(), sdp: pc.localDescription });
   setCode('offerText', 'offerLen', code, '邀请码');
@@ -1096,62 +1121,34 @@ document.getElementById('genAnswerBtn').addEventListener('click', async () => {
   const parsed = decode(raw);
   if (!parsed?.sdp || parsed.type !== 'offer') { toast('邀请码格式不对，请重新复制'); return; }
 
-  document.getElementById('answerArea').style.display = 'flex';
-  document.getElementById('answerText').textContent = '正在生成确认码，请等到这里出现一长串文字后再复制…';
-  document.getElementById('answerLen').textContent = '正在准备摄像头和麦克风权限…';
-  document.getElementById('genAnswerBtn').disabled = true;
-  document.getElementById('genAnswerBtn').style.opacity = '0.55';
+  if (!await getLocalMedia()) return;
+  joinSessionId = parsed.sessionId;
+  document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
+  showScreen('callscreen');
+  showConnecting('正在生成确认码…');
+  document.getElementById('copyAnswerCallBtn').style.display = 'none';
 
   try {
-    if (!await getLocalMedia()) return;
-    joinSessionId = parsed.sessionId;
-    document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
-
     createPC('joiner');
     await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    await gatherICE('answerLen', '确认码');
+    await gatherICE();
 
     const code = encode({ v: 2, type: 'answer', sessionId: joinSessionId, name: getName(), sdp: pc.localDescription });
-    pendingAnswerCode = code;
     setCode('answerText', 'answerLen', code, '确认码');
+    document.getElementById('answerArea').style.display = 'flex';
+    document.getElementById('copyAnswerCallBtn').style.display = 'block';
     document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
-    toast('确认码已生成，先复制发给对方，不要急着关页面', 4200);
+    document.getElementById('connectingMsg').textContent = '确认码已生成，复制发给对方；对方粘贴后会自动进入通话';
+    toast('已生成确认码，把它发给对方！');
+
+    // 如果远端轨道已经提前到了，不要再把等待层盖回去
+    if (document.getElementById('remoteVideo').srcObject || pc.connectionState === 'connected') markConnected();
   } catch(e) {
-    console.error(e);
-    toast('生成确认码失败：请确认邀请码完整，或两边刷新后重来', 5200);
-  } finally {
-    document.getElementById('genAnswerBtn').disabled = false;
-    document.getElementById('genAnswerBtn').style.opacity = '1';
+    toast('生成确认码失败，请重新复制邀请码');
+    hangup();
   }
-});
-
-// 接入方：确认码发回给发起方后，再进入等待通话页
-function enterJoinerWaitingScreen() {
-  const code = pendingAnswerCode || document.getElementById('answerText')?.textContent || '';
-  if (!cleanCode(code) || cleanCode(code).includes('正在')) {
-    toast('确认码还没生成，请先生成并复制确认码');
-    return;
-  }
-  waitingForHostPaste = true;
-  showScreen('callscreen');
-  showConnecting('已生成确认码。请确认你已经发给对方，正在等待发起方粘贴…');
-  showAnswerCallPanel(code);
-  document.getElementById('copyAnswerCallBtn').style.display = 'block';
-  document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
-  if (document.getElementById('remoteVideo').srcObject || pc?.connectionState === 'connected') markConnected();
-}
-
-document.getElementById('waitAfterAnswerBtn').addEventListener('click', enterJoinerWaitingScreen);
-document.getElementById('regenAnswerBtn').addEventListener('click', () => {
-  if (pc) { try { pc.close(); } catch {} pc = null; }
-  pendingAnswerCode = '';
-  waitingForHostPaste = false;
-  document.getElementById('answerArea').style.display = 'none';
-  document.getElementById('answerText').textContent = '';
-  document.getElementById('answerLen').textContent = '正在计算长度…';
-  document.getElementById('genAnswerBtn').click();
 });
 
 document.getElementById('copyAnswerBtn').addEventListener('click', () => {
@@ -1159,21 +1156,17 @@ document.getElementById('copyAnswerBtn').addEventListener('click', () => {
 });
 
 document.getElementById('copyAnswerCallBtn').addEventListener('click', () => {
-  copyText(document.getElementById('answerText').textContent || document.getElementById('answerCallText')?.value || '', '确认码');
+  copyText(document.getElementById('answerText').textContent, '确认码');
 });
-
-document.getElementById('answerCallCopyBtn')?.addEventListener('click', () => {
-  copyText(document.getElementById('answerCallText')?.value || document.getElementById('answerText')?.textContent || '', '确认码');
-});
-document.getElementById('answerCallSelectBtn')?.addEventListener('click', selectAnswerCallText);
-document.getElementById('answerCallCloseBtn')?.addEventListener('click', hideAnswerCallPanel);
-
 
 // ═══════════════════════════════════════════════════════
 //  CALL CONTROLS
 // ═══════════════════════════════════════════════════════
 document.getElementById('hangupBtn').addEventListener('click', hangup);
+document.getElementById('swapBtn').addEventListener('click', toggleVideoLayout);
+document.getElementById('pipBtn').addEventListener('click', openPictureInPicture);
 document.getElementById('beautyBtn').addEventListener('click', toggleBeauty);
+document.getElementById('beautyStrength').addEventListener('input', e => updateBeautyStrength(e.target.value));
 
 document.getElementById('muteBtn').addEventListener('click', () => {
   if (!rawStream) return;
