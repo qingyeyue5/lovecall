@@ -322,6 +322,65 @@
   .checkline input { margin-top: 2px; accent-color: var(--rose); }
   .tiny-note { font-size: 0.68rem; color: rgba(240,221,228,0.35); text-align: center; line-height: 1.45; }
 
+
+
+  /* answer code panel on call screen */
+  .answer-call-panel {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 72px;
+    z-index: 60;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(20,8,14,0.92);
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.45);
+    backdrop-filter: blur(14px);
+  }
+  .answer-call-panel.open { display: flex; }
+  .answer-call-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--blush);
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+  .answer-call-title strong { color: #fff; }
+  .answer-call-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.08);
+    color: var(--blush);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #answerCallText {
+    width: 100%;
+    min-height: 82px;
+    max-height: 130px;
+    resize: vertical;
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    background: rgba(255,255,255,0.06);
+    color: #f0dde4;
+    padding: 10px 12px;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    word-break: break-all;
+    outline: none;
+  }
+  .answer-call-actions { display: flex; gap: 10px; align-items: center; }
+  .answer-call-actions .btn { padding: 10px 14px; font-size: 0.82rem; }
+  .answer-call-hint { font-size: 0.72rem; color: rgba(240,221,228,0.52); line-height: 1.45; }
+
   /* chat */
   .chat-panel {
     position: absolute; left: 14px; right: 14px; bottom: 122px; z-index: 36;
@@ -390,7 +449,7 @@
 <!-- LOBBY -->
 <div class="screen" id="lobby">
   <div class="logo">Love<span>Call</span></div>
-  <p class="tagline">私密 · 点对点 · 无服务器</p>
+  <p class="tagline">私密 · 点对点 · 无服务器 · v6</p>
 
   <div class="card">
     <div class="input-group">
@@ -441,7 +500,9 @@
           <button class="copy-icon-btn" id="copyAnswerBtn" title="复制">⧉</button>
         </div>
         <p class="tiny-note" id="answerLen">正在计算长度…</p>
-        <p class="info" style="color:rgba(240,221,228,0.55);">对方粘贴确认码后即可通话，稍等片刻…</p>
+        <button class="btn btn-primary" id="waitAfterAnswerBtn">✅ 我已把确认码发给对方，进入等待通话</button>
+        <button class="btn btn-secondary" id="regenAnswerBtn">↻ 重新生成确认码</button>
+        <p class="info" style="color:rgba(240,221,228,0.55);">先复制确认码发回给发起方。发完后再点上面的按钮进入等待通话。</p>
       </div>
     </div>
   </div>
@@ -468,6 +529,21 @@
   <div class="status-bar">
     <span class="status-name" id="peerNameDisplay">对方</span>
     <span class="status-dot"><span class="dot"></span> <span id="callTimer">00:00</span></span>
+  </div>
+
+
+
+  <div class="answer-call-panel" id="answerCallPanel">
+    <div class="answer-call-title">
+      <span><strong>确认码已生成。</strong>先复制下面这段，发回给发起方；发起方粘贴后才会真正接通。</span>
+      <button class="answer-call-close" id="answerCallCloseBtn" title="收起">×</button>
+    </div>
+    <textarea id="answerCallText" readonly placeholder="确认码生成后会出现在这里"></textarea>
+    <div class="answer-call-actions">
+      <button class="btn btn-primary" id="answerCallCopyBtn">⧉ 复制确认码</button>
+      <button class="btn btn-secondary" id="answerCallSelectBtn">手动选中</button>
+    </div>
+    <div class="answer-call-hint" id="answerCallHint">如果 iPhone 没自动复制，点“手动选中”后长按文字复制。</div>
   </div>
 
   <div class="chat-panel" id="chatPanel">
@@ -561,6 +637,9 @@ let camOff = false;
 let hostSessionId = null;
 let joinSessionId = null;
 let answerAlreadyUsed = false;
+let pendingAnswerCode = '';
+let currentRole = '';
+let waitingForHostPaste = false;
 let chatChannel = null;
 let unreadChat = 0;
 let beautyEnabled = false;
@@ -638,6 +717,29 @@ function fallbackCopy(text, label) {
   document.body.removeChild(ta);
 }
 
+
+function showAnswerCallPanel(code) {
+  const panel = document.getElementById('answerCallPanel');
+  const text = document.getElementById('answerCallText');
+  if (!panel || !text) return;
+  text.value = cleanCode(code);
+  panel.classList.add('open');
+  document.getElementById('copyAnswerCallBtn').style.display = 'block';
+}
+
+function hideAnswerCallPanel() {
+  document.getElementById('answerCallPanel')?.classList.remove('open');
+}
+
+function selectAnswerCallText() {
+  const text = document.getElementById('answerCallText');
+  if (!text) return;
+  text.focus();
+  text.select();
+  if (text.setSelectionRange) text.setSelectionRange(0, text.value.length);
+  toast('已选中确认码，长按可复制');
+}
+
 function showConnecting(msg) {
   document.getElementById('connectingMsg').textContent = msg || '正在连接…';
   document.getElementById('connectingOverlay').classList.remove('hidden');
@@ -645,7 +747,7 @@ function showConnecting(msg) {
 
 function markConnected() {
   document.getElementById('connectingOverlay').classList.add('hidden');
-  document.getElementById('copyAnswerCallBtn').style.display = 'none';
+  // 不自动隐藏确认码面板，避免接收方还没复制就看不到。
   if (!callStartTime) startTimer();
 }
 
@@ -657,6 +759,10 @@ function rebuildLocalStream(videoTrack) {
 
 async function getLocalMedia() {
   try {
+    if (rawStream && rawStream.getTracks().some(t => t.readyState === 'live')) {
+      if (!localStream || !localStream.getVideoTracks().length) rebuildLocalStream(rawStream.getVideoTracks()[0]);
+      return true;
+    }
     rawStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } },
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -669,15 +775,42 @@ async function getLocalMedia() {
   }
 }
 
-async function gatherICE() {
+async function gatherICE(statusElId = '', label = '网络信息') {
+  const statusEl = statusElId ? document.getElementById(statusElId) : null;
+  const compat = document.getElementById('compatMode')?.checked;
+  const maxWait = compat ? 16000 : 9000;
+  const started = Date.now();
+  if (statusEl) statusEl.textContent = `正在收集${label}，请不要切出页面…`;
+
   return new Promise(res => {
-    if (pc.iceGatheringState === 'complete') { res(); return; }
-    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') res(); };
-    setTimeout(res, 4500);
+    let done = false;
+    const finish = (reason) => {
+      if (done) return;
+      done = true;
+      clearInterval(ticker);
+      clearTimeout(limit);
+      pc.onicegatheringstatechange = null;
+      if (statusEl) {
+        const sec = Math.max(1, Math.round((Date.now() - started) / 1000));
+        statusEl.textContent = `${label}已生成，用时约 ${sec} 秒。`;
+      }
+      res(reason);
+    };
+    const ticker = setInterval(() => {
+      if (!statusEl) return;
+      const left = Math.max(1, Math.ceil((maxWait - (Date.now() - started)) / 1000));
+      statusEl.textContent = `正在收集${label}，最多还需约 ${left} 秒，请不要切出页面…`;
+    }, 1000);
+    if (pc.iceGatheringState === 'complete') { finish('complete'); return; }
+    pc.onicegatheringstatechange = () => {
+      if (pc.iceGatheringState === 'complete') finish('complete');
+    };
+    const limit = setTimeout(() => finish('timeout'), maxWait);
   });
 }
 
 function createPC(role) {
+  currentRole = role || '';
   if (pc) { pc.close(); pc = null; }
   pc = new RTCPeerConnection({ iceServers: getIceServers() });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -697,14 +830,32 @@ function createPC(role) {
   };
 
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'connected') markConnected();
-    if (pc.connectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
+    if (pc.connectionState === 'connected') {
+      waitingForHostPaste = false;
+      markConnected();
+    }
+    if (pc.connectionState === 'failed') {
+      if (currentRole === 'joiner' && waitingForHostPaste) {
+        toast('还在等待发起方粘贴确认码；如果超过 30 秒仍没接通，请两边刷新后重来', 5200);
+      } else {
+        toast('连接失败：请两边同时勾选“兼容网络模式”，重新生成邀请码和确认码');
+      }
+    }
     if (pc.connectionState === 'disconnected') toast('连接中断，请检查网络');
   };
 
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') markConnected();
-    if (pc.iceConnectionState === 'failed') toast('连接失败：可以两边勾选“兼容网络模式”后重试');
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      waitingForHostPaste = false;
+      markConnected();
+    }
+    if (pc.iceConnectionState === 'failed') {
+      if (currentRole === 'joiner' && waitingForHostPaste) {
+        toast('还在等待发起方粘贴确认码；如果超过 30 秒仍没接通，请两边刷新后重来', 5200);
+      } else {
+        toast('连接失败：请两边同时勾选“兼容网络模式”，重新生成邀请码和确认码');
+      }
+    }
   };
 }
 
@@ -761,11 +912,17 @@ function hangup() {
   document.getElementById('localVideo').srcObject = null;
   document.getElementById('beautySource').srcObject = null;
   hostSessionId = null; joinSessionId = null; answerAlreadyUsed = false;
+  pendingAnswerCode = ''; currentRole = ''; waitingForHostPaste = false;
   muted = false; camOff = false;
   resetChat();
   ['step1host','step1joiner'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('step0').style.display = 'flex';
   document.getElementById('answerArea').style.display = 'none';
+  hideAnswerCallPanel();
+  const answerCallTextEl = document.getElementById('answerCallText');
+  if (answerCallTextEl) answerCallTextEl.value = '';
+  const answerTextEl = document.getElementById('answerText');
+  if (answerTextEl) answerTextEl.textContent = '';
   document.getElementById('offerInput').value = '';
   document.getElementById('answerInput').value = '';
   document.getElementById('connectBtn').disabled = false;
@@ -892,7 +1049,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   createPC('host');
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
-  await gatherICE();
+  await gatherICE('offerLen', '邀请码');
 
   const code = encode({ v: 2, type: 'offer', sessionId: hostSessionId, name: getName(), sdp: pc.localDescription });
   setCode('offerText', 'offerLen', code, '邀请码');
@@ -939,34 +1096,62 @@ document.getElementById('genAnswerBtn').addEventListener('click', async () => {
   const parsed = decode(raw);
   if (!parsed?.sdp || parsed.type !== 'offer') { toast('邀请码格式不对，请重新复制'); return; }
 
-  if (!await getLocalMedia()) return;
-  joinSessionId = parsed.sessionId;
-  document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
-  showScreen('callscreen');
-  showConnecting('正在生成确认码…');
-  document.getElementById('copyAnswerCallBtn').style.display = 'none';
+  document.getElementById('answerArea').style.display = 'flex';
+  document.getElementById('answerText').textContent = '正在生成确认码，请等到这里出现一长串文字后再复制…';
+  document.getElementById('answerLen').textContent = '正在准备摄像头和麦克风权限…';
+  document.getElementById('genAnswerBtn').disabled = true;
+  document.getElementById('genAnswerBtn').style.opacity = '0.55';
 
   try {
+    if (!await getLocalMedia()) return;
+    joinSessionId = parsed.sessionId;
+    document.getElementById('peerNameDisplay').textContent = parsed.name || '对方';
+
     createPC('joiner');
     await pc.setRemoteDescription(new RTCSessionDescription(parsed.sdp));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    await gatherICE();
+    await gatherICE('answerLen', '确认码');
 
     const code = encode({ v: 2, type: 'answer', sessionId: joinSessionId, name: getName(), sdp: pc.localDescription });
+    pendingAnswerCode = code;
     setCode('answerText', 'answerLen', code, '确认码');
-    document.getElementById('answerArea').style.display = 'flex';
-    document.getElementById('copyAnswerCallBtn').style.display = 'block';
     document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
-    document.getElementById('connectingMsg').textContent = '确认码已生成，复制发给对方；对方粘贴后会自动进入通话';
-    toast('已生成确认码，把它发给对方！');
-
-    // 如果远端轨道已经提前到了，不要再把等待层盖回去
-    if (document.getElementById('remoteVideo').srcObject || pc.connectionState === 'connected') markConnected();
+    toast('确认码已生成，先复制发给对方，不要急着关页面', 4200);
   } catch(e) {
-    toast('生成确认码失败，请重新复制邀请码');
-    hangup();
+    console.error(e);
+    toast('生成确认码失败：请确认邀请码完整，或两边刷新后重来', 5200);
+  } finally {
+    document.getElementById('genAnswerBtn').disabled = false;
+    document.getElementById('genAnswerBtn').style.opacity = '1';
   }
+});
+
+// 接入方：确认码发回给发起方后，再进入等待通话页
+function enterJoinerWaitingScreen() {
+  const code = pendingAnswerCode || document.getElementById('answerText')?.textContent || '';
+  if (!cleanCode(code) || cleanCode(code).includes('正在')) {
+    toast('确认码还没生成，请先生成并复制确认码');
+    return;
+  }
+  waitingForHostPaste = true;
+  showScreen('callscreen');
+  showConnecting('已生成确认码。请确认你已经发给对方，正在等待发起方粘贴…');
+  showAnswerCallPanel(code);
+  document.getElementById('copyAnswerCallBtn').style.display = 'block';
+  document.getElementById('copyAnswerCallBtn').onclick = () => copyText(code, '确认码');
+  if (document.getElementById('remoteVideo').srcObject || pc?.connectionState === 'connected') markConnected();
+}
+
+document.getElementById('waitAfterAnswerBtn').addEventListener('click', enterJoinerWaitingScreen);
+document.getElementById('regenAnswerBtn').addEventListener('click', () => {
+  if (pc) { try { pc.close(); } catch {} pc = null; }
+  pendingAnswerCode = '';
+  waitingForHostPaste = false;
+  document.getElementById('answerArea').style.display = 'none';
+  document.getElementById('answerText').textContent = '';
+  document.getElementById('answerLen').textContent = '正在计算长度…';
+  document.getElementById('genAnswerBtn').click();
 });
 
 document.getElementById('copyAnswerBtn').addEventListener('click', () => {
@@ -974,8 +1159,15 @@ document.getElementById('copyAnswerBtn').addEventListener('click', () => {
 });
 
 document.getElementById('copyAnswerCallBtn').addEventListener('click', () => {
-  copyText(document.getElementById('answerText').textContent, '确认码');
+  copyText(document.getElementById('answerText').textContent || document.getElementById('answerCallText')?.value || '', '确认码');
 });
+
+document.getElementById('answerCallCopyBtn')?.addEventListener('click', () => {
+  copyText(document.getElementById('answerCallText')?.value || document.getElementById('answerText')?.textContent || '', '确认码');
+});
+document.getElementById('answerCallSelectBtn')?.addEventListener('click', selectAnswerCallText);
+document.getElementById('answerCallCloseBtn')?.addEventListener('click', hideAnswerCallPanel);
+
 
 // ═══════════════════════════════════════════════════════
 //  CALL CONTROLS
